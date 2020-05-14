@@ -22,7 +22,7 @@
     "gulp-cli": "^2.2.0",
     "jade": "~1.11.0",
     "mongoose": "^4.13.7",
-    "morgan": "~1.6.1",
+    "morgan": "~1.10.0",
     "natives": "^1.1.6",
     "serve-favicon": "~2.3.0",
     "solc": "^0.4.18",
