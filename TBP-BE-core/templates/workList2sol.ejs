@@ -1,0 +1,140 @@
+pragma solidity ^0.4.18;
+
+contract <%= nodeName(processId()) %>_AbstractWorlist {
+
+  <%  groupedIds = getWorkItemsGroupByParameters(true);
+      groupedIds.forEach(idGroup => {
+          var nodeId = idGroup[0];-%>
+    function <%= nodeName(nodeId) %>_start(uint<%= getParameterType(nodeId, true, true, true) %>) external;
+  <% }) -%>
+
+  <%  groupedIds = getWorkItemsGroupByParameters(true);
+      groupedIds.forEach(idGroup => {
+          var nodeId = idGroup[0]; 
+          transactionalProperty = nodeTransactionalProperty(nodeId);-%>
+    <% if ( transactionalProperty  == "compensatable" ) { -%>
+    function <%= nodeName(nodeId) %>cp_start(uint<%= getParameterType(nodeId, true, true, true) %>) external;
+  <% }}) -%>
+
+
+  <%  groupedIds = getWorkItemsGroupByParameters(false);
+      groupedIds.forEach(idGroup => {
+          var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>_complete(uint<%= getParameterType(nodeId, false, true, true) %>) external;
+  <% })-%>
+
+  <%  groupedIds = getWorkItemsGroupByParameters(false);
+      groupedIds.forEach(idGroup => {
+          var nodeId = idGroup[0]; 
+           transactionalProperty = nodeTransactionalProperty(nodeId);-%>
+    <% if ( transactionalProperty  == "pivot" ) { -%>
+    function <%= nodeName(nodeId) %>_fail(uint<%= getParameterType(nodeId, false, true, true) %>) external;
+  <% }}) -%>
+
+
+}
+
+contract <%= nodeName(processId()) %>_Worklist {
+
+    struct Workitem {
+        uint elementIndex;
+        address processInstanceAddr;
+    }
+    Workitem[] public workitems;
+
+    // Events with the information to include in the Log when a workitem is registered
+<%  groupedIds = getWorkItemsGroupByParameters(true);
+    groupedIds.forEach(idGroup => { -%>
+    event <%= nodeName(idGroup[0]) %>_Requested(uint<%= getParameterType(idGroup[0], true, true, true) %>);
+<% }) -%>
+
+<%  groupedIds = getWorkItemsGroupByParameters(true);
+    groupedIds.forEach(idGroup => { 
+    transactionalProperty = nodeTransactionalProperty(idGroup[0]);-%>
+    <% if ( transactionalProperty  == "pivot" ) { -%>
+    event <%= nodeName(idGroup[0]) %>_failed(uint<%= getParameterType(idGroup[0], true, true, true) %>);
+<% }}) -%>
+
+<%  groupedIds = getWorkItemsGroupByParameters(true);
+    groupedIds.forEach(idGroup => { 
+    transactionalProperty = nodeTransactionalProperty(idGroup[0]);-%>
+    <% if ( transactionalProperty  == "compensatable" ) { -%>
+    event <%= nodeName(idGroup[0]) %>_compensated(uint<%= getParameterType(idGroup[0], true, true, true) %>);
+<% }}) -%>
+
+
+    function workItemsFor(uint elementIndex, address processInstance) external view returns(uint) {
+        uint reqIndex = 0;
+        for(uint i = 0; i < workitems.length; i++)
+            if(workitems[i].elementIndex == elementIndex && workitems[i].processInstanceAddr == processInstance)
+                reqIndex |= uint(1) << i;
+        return reqIndex;
+    }
+
+    function processInstanceFor(uint workitemId) public returns(address) {
+        require(workitemId < workitems.length);
+        return workitems[workitemId].processInstanceAddr;
+    }
+
+    function elementIndexFor(uint workitemId) public returns(uint) {
+        require(workitemId < workitems.length);
+        return workitems[workitemId].elementIndex;
+    }
+
+<%  groupedIds = getWorkItemsGroupByParameters(true);
+    groupedIds.forEach(idGroup => {
+        var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>_start(uint elementIndex<%= getParameters(nodeId, true, true, true) %>) external {
+    workitems.push(Workitem(elementIndex, msg.sender));
+    emit <%= nodeName(nodeId) %>_Requested(workitems.length - 1<%= getParameters(nodeId, true, false, true) %>);
+    }
+<% }) -%>
+
+
+ <% groupedIds = getWorkItemsGroupByParameters(false);
+    groupedIds.forEach(idGroup => {
+    var nodeId = idGroup[0]; 
+    transactionalProperty = nodeTransactionalProperty(nodeId);
+    if ( transactionalProperty  == "compensatable" ) {-%>
+    function <%= nodeName(nodeId) %>cp_start(uint elementIndex<%= getParameters(nodeId, true, true, true) %>) external {
+    workitems.push(Workitem(elementIndex, msg.sender));
+    emit <%= nodeName(nodeId) %>_compensated(workitems.length - 1<%= getParameters(nodeId, true, false, true) %>);
+    }
+ <% }}) -%>
+
+
+<%  groupedIds = getWorkItemsGroupByParameters(false);
+    groupedIds.forEach(idGroup => {
+    var nodeId = idGroup[0]; -%>
+    function <%= nodeName(nodeId) %>(uint workitemId<%= getParameters(nodeId, false, true, true) %>) external {
+        require(workitemId < workitems.length && workitems[workitemId].processInstanceAddr != address(0));
+        <%= nodeName(processId()) %>_AbstractWorlist(workitems[workitemId].processInstanceAddr).<%= nodeName(nodeId) %>_complete(workitems[workitemId].elementIndex<%= getParameters(nodeId, false, false, true) %>);
+        workitems[workitemId].processInstanceAddr = address(0);
+    }
+<% }) -%>
+
+<%  groupedIds = getWorkItemsGroupByParameters(false);
+    groupedIds.forEach(idGroup => {
+      var nodeId = idGroup[0]; 
+         transactionalProperty = nodeTransactionalProperty(nodeId);       
+    if ( transactionalProperty  == "compensatable" ) {-%>
+    function <%= nodeName(nodeId) %>cp(uint workitemId<%= getParameters(nodeId, false, true, true) %>) external {
+        require(workitemId < workitems.length && workitems[workitemId].processInstanceAddr != address(0));
+        <%= nodeName(processId()) %>_AbstractWorlist(workitems[workitemId].processInstanceAddr).<%= nodeName(nodeId) %>_complete(workitems[workitemId].elementIndex<%= getParameters(nodeId, false, false, true) %>);
+        workitems[workitemId].processInstanceAddr = address(0);
+    }
+ <% }}) -%>
+
+ <%  groupedIds = getWorkItemsGroupByParameters(false);
+    groupedIds.forEach(idGroup => {
+      var nodeId = idGroup[0]; 
+         transactionalProperty = nodeTransactionalProperty(nodeId);       
+    if ( transactionalProperty  == "pivot" ) {-%>
+    function <%= nodeName(nodeId) %>fail(uint workitemId<%= getParameters(nodeId, false, true, true) %>) external {
+        require(workitemId < workitems.length && workitems[workitemId].processInstanceAddr != address(0));
+        <%= nodeName(processId()) %>_AbstractWorlist(workitems[workitemId].processInstanceAddr).<%= nodeName(nodeId) %>_fail(workitems[workitemId].elementIndex<%= getParameters(nodeId, false, false, true) %>);
+        emit <%= nodeName(nodeId) %>_failed (workitems[workitemId].elementIndex);
+        workitems[workitemId].processInstanceAddr = address(0);
+    }
+ <% }}) -%>
+}
