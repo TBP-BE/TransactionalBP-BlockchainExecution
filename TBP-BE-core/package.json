@@ -18,7 +18,7 @@
     "debug": "~2.2.0",
     "ejs": "^2.7.4",
     "ethereumjs-testrpc": "^6.0.3",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "gulp-cli": "^2.2.0",
     "jade": "~1.11.0",
     "mongoose": "^4.13.7",
